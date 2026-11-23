@@ -1,0 +1,313 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "type": "GetMetadata",
+        "typeProperties": {
+          "datasetSettings": {
+            "type": "Binary",
+            "typeProperties": {
+              "location": {
+                "type": "LakehouseLocation",
+                "folderPath": "inbound/customer_billing"
+              }
+            },
+            "linkedService": {
+              "name": "lk_customer_billing",
+              "properties": {
+                "type": "Lakehouse",
+                "typeProperties": {
+                  "artifactId": "f46ed4a6-7c93-8366-4d58-fa0b03e256ce",
+                  "workspaceId": "00000000-0000-0000-0000-000000000000",
+                  "rootFolder": "Files"
+                },
+                "annotations": []
+              }
+            },
+            "annotations": []
+          },
+          "fieldList": [
+            "childItems"
+          ],
+          "storeSettings": {
+            "type": "AzureBlobStorageReadSettings",
+            "recursive": true,
+            "enablePartitionDiscovery": false
+          },
+          "formatSettings": {
+            "type": "BinaryReadSettings"
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "Get Metadata to folder 1",
+        "dependsOn": []
+      },
+      {
+        "type": "ForEach",
+        "typeProperties": {
+          "isSequential": true,
+          "items": {
+            "value": "@activity('Get Metadata to folder 1').output.childItems",
+            "type": "Expression"
+          },
+          "activities": [
+            {
+              "type": "TridentNotebook",
+              "typeProperties": {
+                "notebookId": "b70071d3-6352-8521-4ed0-ff915e7da4a1",
+                "workspaceId": "00000000-0000-0000-0000-000000000000",
+                "parameters": {
+                  "file_name": {
+                    "value": "@item().name",
+                    "type": "string"
+                  },
+                  "pipeline_name": {
+                    "value": "@pipeline().PipelineName",
+                    "type": "string"
+                  },
+                  "task_name": {
+                    "value": "Unzip File And Read Data Files",
+                    "type": "string"
+                  }
+                }
+              },
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "stage1_unzip_file_read_data",
+              "dependsOn": []
+            },
+            {
+              "type": "TridentNotebook",
+              "typeProperties": {
+                "notebookId": "ee795e84-c44d-bdd0-4452-f5a8a6d038fe",
+                "workspaceId": "00000000-0000-0000-0000-000000000000",
+                "parameters": {
+                  "pipeline_name": {
+                    "value": "@pipeline().PipelineName",
+                    "type": "string"
+                  },
+                  "task_name": {
+                    "value": "Load Bronze Data To Related Table",
+                    "type": "string"
+                  },
+                  "yaml_path_bronze": {
+                    "value": "@pipeline().parameters.yaml_path_bronze",
+                    "type": "string"
+                  }
+                }
+              },
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "stage2_load_bronze_data_to_related_table",
+              "dependsOn": [
+                {
+                  "activity": "stage1_unzip_file_read_data",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "TridentNotebook",
+              "typeProperties": {
+                "notebookId": "aa598bdf-5830-abcd-4625-879f1e051cac",
+                "workspaceId": "00000000-0000-0000-0000-000000000000",
+                "parameters": {
+                  "file_name": {
+                    "value": "@item().name",
+                    "type": "string"
+                  },
+                  "pipeline_name": {
+                    "value": "@pipeline().PipelineName",
+                    "type": "string"
+                  },
+                  "task_name": {
+                    "value": "After Reading And Loading Data Then Archiving File For Backup",
+                    "type": "string"
+                  }
+                }
+              },
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureInput": false,
+                "secureOutput": false
+              },
+              "name": "stage3_after_loading_data_archiving_file",
+              "dependsOn": [
+                {
+                  "activity": "stage2_load_bronze_data_to_related_table",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "name": "ForEachzipfile",
+        "dependsOn": [
+          {
+            "activity": "Get Metadata to folder 1",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TridentNotebook",
+        "typeProperties": {
+          "notebookId": "3ba38425-7f30-a64f-4707-ecfc132c3863",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "pipeline_name": {
+              "value": "@pipeline().PipelineName",
+              "type": "string"
+            },
+            "task_name": {
+              "value": "Loading-Bronze-Data-To-Silver-Layer",
+              "type": "string"
+            },
+            "yaml_path_silver": {
+              "value": "@pipeline().parameters.yaml_path_silver",
+              "type": "string"
+            }
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "nb_bronze_to_silver",
+        "dependsOn": [
+          {
+            "activity": "ForEachzipfile",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TridentNotebook",
+        "typeProperties": {
+          "notebookId": "a2e8f226-b2cf-bcc2-42b1-65de26b2f6e3",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "pipeline_name": {
+              "value": "@pipeline().PipelineName",
+              "type": "string"
+            },
+            "task_name": {
+              "value": "Load-Silver-Data-To-Gold-Layer",
+              "type": "string"
+            },
+            "yaml_path_gold": {
+              "value": "@pipeline().parameters.yaml_path_gold",
+              "type": "string"
+            }
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "nb_silver_to_gold",
+        "dependsOn": [
+          {
+            "activity": "nb_bronze_to_silver",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TridentNotebook",
+        "typeProperties": {
+          "notebookId": "0ab4e811-d798-80dd-4763-c9461e5b5a7e",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "pipeline_start_time": {
+              "value": "@variables('v_pipeline_start_time')",
+              "type": "string"
+            },
+            "pipeline_name": {
+              "value": "@pipeline().PipelineName",
+              "type": "string"
+            },
+            "log_table": {
+              "value": "control.etl_run_log",
+              "type": "string"
+            },
+            "pipeline_run_id": {
+              "value": "@pipeline().RunId",
+              "type": "string"
+            }
+          }
+        },
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "name": "nb_send_email_notification",
+        "dependsOn": [
+          {
+            "activity": "nb_silver_to_gold",
+            "dependencyConditions": [
+              "Completed"
+            ]
+          }
+        ]
+      }
+    ],
+    "parameters": {
+      "yaml_path_bronze": {
+        "type": "string",
+        "defaultValue": "/lakehouse/default/Files/config/yaml/bronze/"
+      },
+      "yaml_path_silver": {
+        "type": "string",
+        "defaultValue": "/lakehouse/default/Files/config/yaml/silver/"
+      },
+      "yaml_path_gold": {
+        "type": "string",
+        "defaultValue": "/lakehouse/default/Files/config/yaml/gold/"
+      }
+    },
+    "variables": {
+      "v_pipeline_start_time": {
+        "type": "String",
+        "defaultValue": "@utcNow()"
+      }
+    }
+  }
+}

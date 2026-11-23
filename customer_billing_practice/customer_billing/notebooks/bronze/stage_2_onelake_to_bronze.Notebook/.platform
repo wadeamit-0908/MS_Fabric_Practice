@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "stage_2_onelake_to_bronze"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "ee795e84-c44d-bdd0-4452-f5a8a6d038fe"
+  }
+}
